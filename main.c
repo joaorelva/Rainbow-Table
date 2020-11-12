@@ -8,6 +8,7 @@
 #include <openssl/rand.h>
 #include <unistd.h>
 #include <time.h>
+#include <math.h>
 
 #define KEY_LEN 16 
 
@@ -58,31 +59,23 @@ void genKey(uint8_t *key, uint8_t *pwd, int pwdlength) {
     key[KEY_LEN] = 0;
 }
 
-void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength) {
+void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength,int i) {
     char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
     int c;
     int mod;
     for (int i = 0; i < pwdlength; i++) {
-        c = (int) hashed[i];
+        c = (int) (hashed[i] * pow(2,i));
         mod = c % ((sizeof (alphanum)) - 1);
         reduced[i] = alphanum[mod];
     }
     reduced[pwdlength] = 0;
 }
 
-int calcExp2(int s) {
-    int result = 1;
-    for (int i = 0; i < s; i++) {
-        result *= 2;
-    }
-    return result;
-}
-
 void table(int pwdlength, int s, char *filename) {
     FILE *f;
     int expresult, pwdspace = 1;
 
-    expresult = calcExp2(s);
+    expresult = pow(2,s);
     unsigned long int rtsize = 16 * expresult;
     strcat(filename, ".txt");
 
@@ -114,7 +107,7 @@ void table(int pwdlength, int s, char *filename) {
             for (int j = 0; j < chainlength; j++) {
                 //ciclo demora muito tempo
                 AES_Crypto(key, hashed);
-                Rfunction(hashed, reduced, pwdlength); //modificar R function
+                Rfunction(hashed, reduced, pwdlength,j); //modificar R function
                 genKey(key, reduced, pwdlength);
             }
             fprintf(f, " %s\n", reduced);
