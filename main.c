@@ -100,44 +100,43 @@ void table(int pwdlength, int s, char *filename) {
     int exp_result;
     exp_result = calc_exp_2(s);
     unsigned long long int rb_size = 16 * exp_result;
-    printf("Rainbow Table Size: %d\n", rb_size);
     strcat(filename, ".txt");
-
-    int k = s-2;
-    printf("k: %d\n", k);
-    int n_linhas;
-    n_linhas = rb_size / ((pwdlength * 2) + 1);
-    printf("N linhas: %d\n\n", n_linhas);
-
+    
+    int n_rows = rb_size / (2 * pwdlength);
+    int chain_length = (64 * 64 * 64 * 64) / n_rows;
+    
     if ((f = fopen(filename, "w")) == NULL) {
         printf("CANNOT OPEN FILE\n");
     };
+
     fprintf(f, "%d\n", pwdlength);
     for (int i = 0; i < (64 * 64 * 64 * 64); i++) {
-        //--------------------------GERA PASSWORD E KEY-------------------------
-        uint8_t pwd[pwdlength];
-        random_pwd(pwd, pwdlength);
-        printf("PASSWORD: %s\n", pwd);
-        uint8_t key[KEY_LEN];
-        gen_key(key, pwd, pwdlength);
-        printf("KEY: %s\n", key);
-        //ESCREVE PASSWORD EM FICHEIRO DE TEXTO
-        uint8_t reduced[pwdlength];
-        fprintf(f, "%s", pwd);
-        //--------------------------GERA HASH DA PASSWORD-----------------------
-        for (int j = 0; j < k; j++) {
-            uint8_t hashed[KEY_LEN];
-            AES_Crypto(key, hashed);
-            //--------------------------FAZ A REDUÇÃO DA HASH-------------------
-            int r[pwdlength];
-            intarrayrand(r, pwdlength);
-            Rfunction(hashed, reduced, pwdlength, r);
-            gen_key(key, reduced, pwdlength);
-            printf("Reduced %d : %s\n", j + 1, reduced);
+        for (int l = 0; l < n_rows; l++) {
+            //--------------------------GERA PASSWORD E KEY-------------------------
+            uint8_t pwd[pwdlength];
+            random_pwd(pwd, pwdlength);
+            printf("PASSWORD: %s\n", pwd);
+            uint8_t key[KEY_LEN];
+            gen_key(key, pwd, pwdlength);
+            printf("KEY: %s\n", key);
+            //ESCREVE PASSWORD EM FICHEIRO DE TEXTO
+            uint8_t reduced[pwdlength];
+            fprintf(f, "%s", pwd);
+            //--------------------------GERA HASH DA PASSWORD-----------------------
+            for (int j = 0; j < chain_length; j++) {
+                uint8_t hashed[KEY_LEN];
+                AES_Crypto(key, hashed);
+                //--------------------------FAZ A REDUÇÃO DA HASH-------------------
+                //alocar entry/endpoints dinamicamente
+                int r[pwdlength];
+                intarrayrand(r, pwdlength);
+                Rfunction(hashed, reduced, pwdlength, r); //modificar
+                gen_key(key, reduced, pwdlength);
+            }
+            printf("REDUCED FINAL: %s\n", reduced);
+            printf("\n-------------------------------------\n");
+            fprintf(f, " %s\n", reduced);
         }
-        printf("REDUCED FINAL: %s\n", reduced);
-        printf("\n-------------------------------------\n");
-        fprintf(f, " %s\n", reduced);
     }
     fclose(f);
 }
@@ -151,9 +150,6 @@ int main(int argc, char** argv) {
         printf("[ERRO] Nr. errado de args!\n");
         exit(1);
     }
-
-    fflush(stdin);
-    fflush(stdout);
 
     int pwd_length = atoi(argv[1]);
     int s = atoi(argv[2]);
@@ -170,8 +166,8 @@ int main(int argc, char** argv) {
     };
 
     //falta proteção do s e do filename
-    table(pwd_length, s, filename);
 
+    table(pwd_length, s, filename);
 
     return (EXIT_SUCCESS);
 }
