@@ -30,29 +30,26 @@ void AES_Crypto(uint8_t *key, uint8_t *hashed) {
     strcpy(hashed, ciphertext);
 }
 
-void random_pwd(uint8_t *s, const int len) {
+void randomPwd(uint8_t *s, int pwdlength) {
     int num = rand();
     srand(getpid() + num);
-    static const char alphanum[] =
-            "0123456789!?"
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "abcdefghijklmnopqrstuvwxyz";
+    char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
 
-    for (int i = 0; i < len; ++i) {
+    for (int i = 0; i < pwdlength; ++i) {
         s[i] = alphanum[rand() % (sizeof (alphanum) - 1)];
     }
-    s[len] = 0;
+    s[pwdlength] = 0;
 }
 
-void gen_key(uint8_t *key, uint8_t *pwd, const int len) {
+void genKey(uint8_t *key, uint8_t *pwd, int pwdlength) {
     int conta = 0;
     int conta2 = 0;
 
     while (conta < KEY_LEN) {
-        if (conta2 == len) {
+        if (conta2 == pwdlength) {
             conta2 = 0;
         }
-        if (conta2 < len) {
+        if (conta2 < pwdlength) {
             key[conta] = pwd[conta2];
             conta2++;
         }
@@ -61,19 +58,19 @@ void gen_key(uint8_t *key, uint8_t *pwd, const int len) {
     key[KEY_LEN] = 0;
 }
 
-void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdl) {
+void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength) {
     char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
     int c;
     int mod;
-    for (int i = 0; i < pwdl; i++) {
+    for (int i = 0; i < pwdlength; i++) {
         c = (int) hashed[i];
         mod = c % ((sizeof (alphanum)) - 1);
         reduced[i] = alphanum[mod];
     }
-    reduced[pwdl] = 0;
+    reduced[pwdlength] = 0;
 }
 
-int calc_exp_2(int s) {
+int calcExp2(int s) {
     int result = 1;
     for (int i = 0; i < s; i++) {
         result *= 2;
@@ -83,17 +80,18 @@ int calc_exp_2(int s) {
 
 void table(int pwdlength, int s, char *filename) {
     FILE *f;
-    int exp_result, pwdspace = 1;
-    exp_result = calc_exp_2(s);
-    unsigned long long int rb_size = 16 * exp_result;
+    int expresult, pwdspace = 1;
+
+    expresult = calcExp2(s);
+    unsigned long int rtsize = 16 * expresult;
     strcat(filename, ".txt");
 
     for (int i = 0; i < pwdlength; i++) {
         pwdspace *= 64;
     }
 
-    int n_rows = rb_size / (2 * pwdlength);
-    int chain_length = pwdspace / n_rows;
+    int nrows = rtsize / (2 * pwdlength);
+    int chainlength = pwdspace / nrows;
 
     if ((f = fopen(filename, "w")) == NULL) {
         printf("CANNOT OPEN FILE\n");
@@ -109,17 +107,18 @@ void table(int pwdlength, int s, char *filename) {
 
     fprintf(f, "%d\n", pwdlength);
     for (int i = 0; i < pwdspace; i++) {
-        for (int l = 0; l < n_rows; l++) {
-            random_pwd(pwd, pwdlength);
+        for (int l = 0; l < nrows; l++) {
+            randomPwd(pwd, pwdlength);
             fprintf(f, "%s", pwd);
-            gen_key(key, pwd, pwdlength);
-            for (int j = 0; j < chain_length; j++) {
+            genKey(key, pwd, pwdlength);
+            for (int j = 0; j < chainlength; j++) {
                 //ciclo demora muito tempo
                 AES_Crypto(key, hashed);
                 Rfunction(hashed, reduced, pwdlength); //modificar R function
-                gen_key(key, reduced, pwdlength);
+                genKey(key, reduced, pwdlength);
             }
             fprintf(f, " %s\n", reduced);
+            printf("Reduced: %s\n", reduced);
         }
     }
     fclose(f);
@@ -129,32 +128,38 @@ void table(int pwdlength, int s, char *filename) {
 
 int main(int argc, char** argv) {
 
-    char filename[20];
-    int rb_size, exp_result;
-
     if (argc < 4 || argc > 4) {
         printf("[ERRO] Nr. errado de args!\n");
         exit(1);
     }
 
-    int pwd_length = atoi(argv[1]);
+    char filename[10];
+    int pwdlength = atoi(argv[1]);
     int s = atoi(argv[2]);
     strcpy(filename, argv[3]);
 
-    printf("Password Length: %d\n", pwd_length);
+    printf("Password Length: %d\n", pwdlength);
     printf("Max size of Rainbow Table: %d\n", s);
     printf("Rainbow Table file name: %s\n", filename);
 
-
-    if (pwd_length < 4 || pwd_length > 8) {
+    if (pwdlength < 4 || pwdlength > 8) {
         printf("Invalid Password length.Exiting... \n");
         exit(1);
     };
 
-    //falta proteção do s e do filename
+    if (strlen(filename) > 10) {
+        printf("Invalid file name length.Exiting... \n");
+        exit(1);
+    }
+
+    if (s < 0) {
+        printf("Invalid s input.Exiting... \n");
+        exit(1);
+    }
+
     clock_t tic = clock();
 
-    table(pwd_length, s, filename);
+    table(pwdlength, s, filename);
 
     clock_t toc = clock();
 
