@@ -83,15 +83,15 @@ int calc_exp_2(int s) {
 
 void table(int pwdlength, int s, char *filename) {
     FILE *f;
-    int exp_result,pwdspace=1;
+    int exp_result, pwdspace = 1;
     exp_result = calc_exp_2(s);
     unsigned long long int rb_size = 16 * exp_result;
     strcat(filename, ".txt");
-    
-    for(int i=0;i<pwdlength;i++){
-        pwdspace*=64;
+
+    for (int i = 0; i < pwdlength; i++) {
+        pwdspace *= 64;
     }
-    
+
     int n_rows = rb_size / (2 * pwdlength);
     int chain_length = pwdspace / n_rows;
 
@@ -114,6 +114,7 @@ void table(int pwdlength, int s, char *filename) {
             fprintf(f, "%s", pwd);
             gen_key(key, pwd, pwdlength);
             for (int j = 0; j < chain_length; j++) {
+                //ciclo demora muito tempo
                 AES_Crypto(key, hashed);
                 Rfunction(hashed, reduced, pwdlength); //modificar R function
                 gen_key(key, reduced, pwdlength);
