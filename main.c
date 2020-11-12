@@ -61,26 +61,12 @@ void gen_key(uint8_t *key, uint8_t *pwd, const int len) {
     key[KEY_LEN] = 0;
 }
 
-void intarrayrand(int *r, int pwdl) {
-    for (int i = 0; i < pwdl; i++) {
-        int num1 = rand();
-        srand(getpid() + num1);
-        int num2 = rand() % KEY_LEN;
-        for (int j = 0; j < pwdl; j++) {
-            while (r[j] == num2) {
-                num2 = rand() % KEY_LEN;
-            }
-        }
-        r[i] = num2;
-    }
-}
-
-void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdl, int r[]) {
+void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdl) {
     char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
     int c;
     int mod;
     for (int i = 0; i < pwdl; i++) {
-        c = (int) hashed[r[i]];
+        c = (int) hashed[i];
         mod = c % ((sizeof (alphanum)) - 1);
         reduced[i] = alphanum[mod];
     }
@@ -97,48 +83,47 @@ int calc_exp_2(int s) {
 
 void table(int pwdlength, int s, char *filename) {
     FILE *f;
-    int exp_result;
+    int exp_result,pwdspace=1;
     exp_result = calc_exp_2(s);
     unsigned long long int rb_size = 16 * exp_result;
     strcat(filename, ".txt");
     
-    int n_rows = rb_size / (2 * pwdlength);
-    int chain_length = (64 * 64 * 64 * 64) / n_rows;
+    for(int i=0;i<pwdlength;i++){
+        pwdspace*=64;
+    }
     
+    int n_rows = rb_size / (2 * pwdlength);
+    int chain_length = pwdspace / n_rows;
+
     if ((f = fopen(filename, "w")) == NULL) {
         printf("CANNOT OPEN FILE\n");
     };
 
+    uint8_t *pwd;
+    pwd = (uint8_t *) malloc(sizeof (uint8_t)*4);
+
+    uint8_t *reduced;
+    reduced = (uint8_t *) malloc(sizeof (uint8_t)*4);
+
+    uint8_t key[KEY_LEN], hashed[KEY_LEN];
+
     fprintf(f, "%d\n", pwdlength);
-    for (int i = 0; i < (64 * 64 * 64 * 64); i++) {
+    for (int i = 0; i < pwdspace; i++) {
         for (int l = 0; l < n_rows; l++) {
-            //--------------------------GERA PASSWORD E KEY-------------------------
-            uint8_t pwd[pwdlength];
             random_pwd(pwd, pwdlength);
-            printf("PASSWORD: %s\n", pwd);
-            uint8_t key[KEY_LEN];
-            gen_key(key, pwd, pwdlength);
-            printf("KEY: %s\n", key);
-            //ESCREVE PASSWORD EM FICHEIRO DE TEXTO
-            uint8_t reduced[pwdlength];
             fprintf(f, "%s", pwd);
-            //--------------------------GERA HASH DA PASSWORD-----------------------
+            gen_key(key, pwd, pwdlength);
             for (int j = 0; j < chain_length; j++) {
-                uint8_t hashed[KEY_LEN];
                 AES_Crypto(key, hashed);
-                //--------------------------FAZ A REDUÇÃO DA HASH-------------------
-                //alocar entry/endpoints dinamicamente
-                int r[pwdlength];
-                intarrayrand(r, pwdlength);
-                Rfunction(hashed, reduced, pwdlength, r); //modificar
+                Rfunction(hashed, reduced, pwdlength); //modificar R function
                 gen_key(key, reduced, pwdlength);
             }
-            printf("REDUCED FINAL: %s\n", reduced);
-            printf("\n-------------------------------------\n");
             fprintf(f, " %s\n", reduced);
         }
     }
     fclose(f);
+    free(pwd);
+    free(reduced);
 }
 
 int main(int argc, char** argv) {
@@ -166,8 +151,13 @@ int main(int argc, char** argv) {
     };
 
     //falta proteção do s e do filename
+    clock_t tic = clock();
 
     table(pwd_length, s, filename);
+
+    clock_t toc = clock();
+
+    printf("Elapsed: %f seconds\n", (double) (toc - tic) / CLOCKS_PER_SEC);
 
     return (EXIT_SUCCESS);
 }
