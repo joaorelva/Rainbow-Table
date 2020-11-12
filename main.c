@@ -59,12 +59,12 @@ void genKey(uint8_t *key, uint8_t *pwd, int pwdlength) {
     key[KEY_LEN] = 0;
 }
 
-void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength,int i) {
+void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength, int i) {
     char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
     int c;
     int mod;
     for (int i = 0; i < pwdlength; i++) {
-        c = (int) (hashed[i] * pow(2,i));
+        c = (int) (hashed[i] * pow(2, i));
         mod = c % ((sizeof (alphanum)) - 1);
         reduced[i] = alphanum[mod];
     }
@@ -75,7 +75,7 @@ void table(int pwdlength, int s, char *filename) {
     FILE *f;
     int expresult, pwdspace = 1;
 
-    expresult = pow(2,s);
+    expresult = pow(2, s);
     unsigned long int rtsize = 16 * expresult;
     strcat(filename, ".txt");
 
@@ -107,7 +107,7 @@ void table(int pwdlength, int s, char *filename) {
             for (int j = 0; j < chainlength; j++) {
                 //ciclo demora muito tempo
                 AES_Crypto(key, hashed);
-                Rfunction(hashed, reduced, pwdlength,j); //modificar R function
+                Rfunction(hashed, reduced, pwdlength, j); 
                 genKey(key, reduced, pwdlength);
             }
             fprintf(f, " %s\n", reduced);
