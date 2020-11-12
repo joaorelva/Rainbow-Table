@@ -12,23 +12,18 @@
 
 #define KEY_LEN 16 
 
-void AES_Crypto(uint8_t *key, uint8_t *hashed) {
-
+void AES_Crypto(uint8_t * from, uint8_t * to, int len) {
     EVP_CIPHER_CTX * ctx;
-    int keylen = KEY_LEN;
 
     ctx = EVP_CIPHER_CTX_new();
-    EVP_CipherInit(ctx, EVP_aes_128_ecb(), key, NULL, 1);
 
-    EVP_CIPHER_CTX_set_padding(ctx, 0);
+    for (int i = 0; i < 16 - len; i++) {
+        from[i + len] = from[i % len];
+    }
 
-    uint8_t ciphertext[KEY_LEN];
-    EVP_CipherUpdate(ctx, ciphertext, &keylen, key, keylen);
-
-    EVP_CipherFinal(ctx, ciphertext, &keylen);
-    EVP_CIPHER_CTX_free(ctx);
-
-    strcpy(hashed, ciphertext);
+    EVP_EncryptInit(ctx, EVP_aes_128_ecb(), from, 0);
+    EVP_EncryptUpdate(ctx, to, &len, from, 16);
+    EVP_CIPHER_CTX_cleanup(ctx);
 }
 
 void randomPwd(uint8_t *s, int pwdlength) {
@@ -42,24 +37,7 @@ void randomPwd(uint8_t *s, int pwdlength) {
     s[pwdlength] = 0;
 }
 
-void genKey(uint8_t *key, uint8_t *pwd, int pwdlength) {
-    int conta = 0;
-    int conta2 = 0;
-
-    while (conta < KEY_LEN) {
-        if (conta2 == pwdlength) {
-            conta2 = 0;
-        }
-        if (conta2 < pwdlength) {
-            key[conta] = pwd[conta2];
-            conta2++;
-        }
-        conta++;
-    }
-    key[KEY_LEN] = 0;
-}
-
-void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength, int i) {
+void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength) {
     char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
     int c;
     int mod;
@@ -91,32 +69,37 @@ void table(int pwdlength, int s, char *filename) {
     };
 
     uint8_t *pwd;
-    pwd = (uint8_t *) malloc(sizeof (uint8_t)*4);
+    pwd = (uint8_t *) malloc(sizeof (uint8_t) * pwdlength);
 
     uint8_t *reduced;
-    reduced = (uint8_t *) malloc(sizeof (uint8_t)*4);
+    reduced = (uint8_t *) malloc(sizeof (uint8_t) * pwdlength);
 
-    uint8_t key[KEY_LEN], hashed[KEY_LEN];
+    uint8_t *key;
+    key = (uint8_t *) malloc(sizeof (uint8_t) * KEY_LEN);
+    
+    uint8_t *hashed;
+    hashed = (uint8_t *) malloc(sizeof (uint8_t) * KEY_LEN);
 
-    fprintf(f, "%d\n", pwdlength);
-    for (int i = 0; i < pwdspace; i++) {
-        for (int l = 0; l < nrows; l++) {
-            randomPwd(pwd, pwdlength);
-            fprintf(f, "%s", pwd);
-            genKey(key, pwd, pwdlength);
-            for (int j = 0; j < chainlength; j++) {
-                //ciclo demora muito tempo
-                AES_Crypto(key, hashed);
-                Rfunction(hashed, reduced, pwdlength, j); 
-                genKey(key, reduced, pwdlength);
-            }
-            fprintf(f, " %s\n", reduced);
-            printf("Reduced: %s\n", reduced);
+    fprintf(f, "%d %d\n",pwdlength,chainlength);
+
+    for (int l = 0; l < nrows; l++) {
+        randomPwd(pwd, pwdlength);
+        printf("Entrypoint: %s -->", pwd);
+        fwrite(pwd, 1, pwdlength, f);
+        fputc(' ', f);
+        for (int j = 0; j < chainlength; j++) {
+            AES_Crypto(pwd, hashed, pwdlength);
+            Rfunction(hashed, reduced, pwdlength);
         }
+        fwrite(reduced, 1, pwdlength, f);
+        printf(" Endpoint: %s\n", reduced);
+        fputc('\n', f);
     }
     fclose(f);
     free(pwd);
     free(reduced);
+    free(key);
+    free(hashed);
 }
 
 int main(int argc, char** argv) {
