@@ -32,7 +32,6 @@ void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength, int j) {
     int mod;
 
     for (int i = 0; i < pwdlength; i++) {
-        //c = (int) (hashed[i] * (j + 1));
         c = (int) (hashed[i] + (j * i));
         mod = c % ((sizeof (alphanum)) - 1);
         reduced[i] = alphanum[mod];
@@ -63,48 +62,55 @@ void guess(char *filename, uint8_t *hash) {
     uint8_t *hashed;
     hashed = (uint8_t *) malloc(sizeof (uint8_t) * pwdlength);
 
-    //uint8_t key[KEY_LEN];
-    //uint8_t hash2[KEY_LEN];
-    //uint8_t reduced_ant[pwdlength];
+    int encontra = 1;
+
     Rfunction(hash, reduced, pwdlength, 0);
-    printf("REDUCED INICIAL: %s\n", reduced);
     for (int i = 1; i < chainlength; i++) {
-        printf("RED: %s\n", reduced);
         AES_Crypto(reduced, hashed, pwdlength);
-        //reduced[pwdlength]=0;
         Rfunction(hashed, reduced, pwdlength, i);
     }
 
-    while (fscanf(f, "%s %s", pwd_file, reduced_file) != EOF || cracked == 1) {
+    while (fscanf(f, "%s %s", pwd_file, reduced_file) != EOF) {
         if (memcmp(reduced, reduced_file, pwdlength) == 0) {
             cracked = 1;
             printf("PASSWORD CRACKED: %s\n", pwd_file);
+            break;
         }
     }
-    /*
-        Rfunction(hash, reduced, pwdlength, r);
 
-        strcpy(reduced_ant, reduced);
-
-        while (fscanf(f, "%s %s", pwd, reduced_file) != EOF || cracked == 1) {
-            strcpy(reduced, reduced_ant);
-            if (strcmp(reduced, reduced_file) == 0) {
-                cracked = 1;
-                printf("PASSWORD CRACKED: %s\n", pwd);
-            } else {
-                for (int i = 0; i < 8; i++) {
-                    gen_key(key, reduced, pwdlength);
-                    AES_Crypto(key, hash2);
-                    Rfunction(hash2, reduced, pwdlength, r);
-                    if (strcmp(reduced, reduced_file) == 0) {
-                        printf("PASSWORD CRACKED: %s\n", pwd);
+    int conta = 0;
+    
+    while (cracked != 1 || encontra != chainlength) {
+        Rfunction(hash, reduced, pwdlength, 0);
+        for (int i = 1; i < chainlength - encontra; i++) {
+            AES_Crypto(reduced, hashed, pwdlength);
+            Rfunction(hashed, reduced, pwdlength, i);
+        }
+        for (int i = 0; i < encontra; i++) {
+            AES_Crypto(reduced, hashed, pwdlength);
+            Rfunction(hashed, reduced, pwdlength, i);
+        }
+        while (fscanf(f, "%s %s", pwd_file, reduced_file) != EOF) {
+            if (memcmp(reduced, reduced_file, pwdlength) == 0) {
+                int h = 0;
+                while (h == 0) {
+                    AES_Crypto(pwd_file, hashed, pwdlength);
+                    if (memcmp(hash, hashed,pwdlength) == 0) {
+                        printf("PASSWORD CRACKED: %s\n", reduced);
                         cracked = 1;
+                        h = 1; 
                     }
+                    else{
+                        Rfunction(hashed, reduced, pwdlength, conta);
+                    }
+                    conta++;
                 }
+
             }
         }
-        fclose(f);
-     * */
+        encontra++;
+    }
+
     fclose(f);
     free(reduced_file);
     free(pwd_file);
