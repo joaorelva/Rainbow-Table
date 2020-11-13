@@ -12,7 +12,7 @@
 
 #define KEY_LEN 16 
 
-void AES_Crypto(uint8_t * from, uint8_t * to, int len) {
+void AES_Crypto(uint8_t *from, uint8_t * to, int len) {
     EVP_CIPHER_CTX * ctx;
 
     ctx = EVP_CIPHER_CTX_new();
@@ -37,12 +37,14 @@ void randomPwd(uint8_t *s, int pwdlength) {
     s[pwdlength] = 0;
 }
 
-void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength,int j) {
+void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength, int j) {
     char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
     int c;
     int mod;
+
     for (int i = 0; i < pwdlength; i++) {
-        c = (int) (hashed[i] * j);
+        //c = (int) (hashed[i] * (j + 1));
+        c = (int) (hashed[i] + (j*i));
         mod = c % ((sizeof (alphanum)) - 1);
         reduced[i] = alphanum[mod];
     }
@@ -76,11 +78,11 @@ void table(int pwdlength, int s, char *filename) {
 
     uint8_t *key;
     key = (uint8_t *) malloc(sizeof (uint8_t) * KEY_LEN);
-    
+
     uint8_t *hashed;
     hashed = (uint8_t *) malloc(sizeof (uint8_t) * KEY_LEN);
 
-    fprintf(f, "%d %d\n",pwdlength,chainlength);
+    fprintf(f, "%d %d\n", pwdlength, chainlength);
 
     for (int l = 0; l < nrows; l++) {
         randomPwd(pwd, pwdlength);
@@ -88,9 +90,15 @@ void table(int pwdlength, int s, char *filename) {
         fwrite(pwd, 1, pwdlength, f);
         fputc(' ', f);
         for (int j = 0; j < chainlength; j++) {
+            //printf("Pass: %s -> ", pwd);
             AES_Crypto(pwd, hashed, pwdlength);
-            Rfunction(hashed, reduced, pwdlength,j);
+            //printf("Key: %s\n", pwd);
+            Rfunction(hashed, reduced, pwdlength, j);
+            //printf("R: %s\n", reduced);
+            pwd[pwdlength] = 0;
+            memcpy(pwd, reduced, pwdlength);
         }
+        //printf("R: %s\n", pwd);
         fwrite(reduced, 1, pwdlength, f);
         printf(" Endpoint: %s\n", reduced);
         fputc('\n', f);
