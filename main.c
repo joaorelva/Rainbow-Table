@@ -90,15 +90,11 @@ void table(int pwdlength, int s, char *filename) {
         fwrite(pwd, 1, pwdlength, f);
         fputc(' ', f);
         for (int j = 0; j < chainlength; j++) {
-            //printf("Pass: %s -> ", pwd);
             AES_Crypto(pwd, hashed, pwdlength);
-            //printf("Key: %s\n", pwd);
             Rfunction(hashed, reduced, pwdlength, j);
-            //printf("R: %s\n", reduced);
             pwd[pwdlength] = 0;
             memcpy(pwd, reduced, pwdlength);
         }
-        //printf("R: %s\n", pwd);
         fwrite(reduced, 1, pwdlength, f);
         printf(" Endpoint: %s\n", reduced);
         fputc('\n', f);
