@@ -37,12 +37,12 @@ void randomPwd(uint8_t *s, int pwdlength) {
     s[pwdlength] = 0;
 }
 
-void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength) {
+void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength,int j) {
     char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
     int c;
     int mod;
     for (int i = 0; i < pwdlength; i++) {
-        c = (int) (hashed[i] * pow(2, i));
+        c = (int) (hashed[i] * j);
         mod = c % ((sizeof (alphanum)) - 1);
         reduced[i] = alphanum[mod];
     }
@@ -89,7 +89,7 @@ void table(int pwdlength, int s, char *filename) {
         fputc(' ', f);
         for (int j = 0; j < chainlength; j++) {
             AES_Crypto(pwd, hashed, pwdlength);
-            Rfunction(hashed, reduced, pwdlength);
+            Rfunction(hashed, reduced, pwdlength,j);
         }
         fwrite(reduced, 1, pwdlength, f);
         printf(" Endpoint: %s\n", reduced);
