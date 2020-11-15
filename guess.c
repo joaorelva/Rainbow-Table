@@ -12,6 +12,9 @@
 
 #define KEY_LEN 16 
 
+char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
+int AESevaluated = 0;
+
 void AES_Crypto(uint8_t *from, uint8_t * to, int len) {
     EVP_CIPHER_CTX * ctx;
 
@@ -24,17 +27,18 @@ void AES_Crypto(uint8_t *from, uint8_t * to, int len) {
     EVP_EncryptInit(ctx, EVP_aes_128_ecb(), from, 0);
     EVP_EncryptUpdate(ctx, to, &len, from, 16);
     EVP_CIPHER_CTX_cleanup(ctx);
+    
+    AESevaluated++;
 }
 
 void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength, int j) {
-    char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
     int c;
     int mod;
 
     for (int i = 0; i < pwdlength; i++) {
         c = (int) (hashed[i] + (j * i));
-        mod = c % ((sizeof (alphanum)) - 1);
-        reduced[i] = alphanum[mod];
+        mod = c % (strlen(charset));
+        reduced[i] = charset[mod];
     }
     reduced[pwdlength] = 0;
 }
@@ -93,6 +97,10 @@ void guess(char *filename, uint8_t *hash) {
         encontra++;
         fseek(f, 1, SEEK_CUR);
     }
+    
+    if(flag == 0){
+        printf("Failure cracking the password\n");
+    }
 
     fclose(f);
     free(reduced_file);
@@ -118,7 +126,7 @@ int main(int argc, char** argv) {
         printf("Invalid Password length.Exiting... \n");
         exit(1);
     }
-    
+
     hash[0] = 83;
     hash[1] = 33;
     hash[2] = 171;
@@ -137,7 +145,6 @@ int main(int argc, char** argv) {
     hash[15] = 255;
 
     guess(filename, hash);
-
 
     return (EXIT_SUCCESS);
 }

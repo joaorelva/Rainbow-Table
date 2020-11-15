@@ -12,6 +12,8 @@
 
 #define KEY_LEN 16 
 
+char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
+
 void AES_Crypto(uint8_t *from, uint8_t * to, int len) {
     EVP_CIPHER_CTX * ctx;
 
@@ -29,24 +31,21 @@ void AES_Crypto(uint8_t *from, uint8_t * to, int len) {
 void randomPwd(uint8_t *s, int pwdlength) {
     int num = rand();
     srand(getpid() + num);
-    char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
 
     for (int i = 0; i < pwdlength; ++i) {
-        s[i] = alphanum[rand() % (sizeof (alphanum) - 1)];
+        s[i] = charset[rand() % (sizeof (charset) - 1)];
     }
     s[pwdlength] = 0;
 }
 
 void Rfunction(uint8_t *hashed, uint8_t *reduced, int pwdlength, int j) {
-    char alphanum[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?";
     int c;
     int mod;
-
+    
     for (int i = 0; i < pwdlength; i++) {
-        //c = (int) (hashed[i] * (j + 1));
-        c = (int) (hashed[i] + (j*i));
-        mod = c % ((sizeof (alphanum)) - 1);
-        reduced[i] = alphanum[mod];
+        c = (int) (hashed[i] + (j * i));
+        mod = c % (strlen(charset));
+        reduced[i] = charset[mod];
     }
     reduced[pwdlength] = 0;
 }
@@ -76,9 +75,6 @@ void table(int pwdlength, int s, char *filename) {
     uint8_t *reduced;
     reduced = (uint8_t *) malloc(sizeof (uint8_t) * pwdlength);
 
-    uint8_t *key;
-    key = (uint8_t *) malloc(sizeof (uint8_t) * KEY_LEN);
-
     uint8_t *hashed;
     hashed = (uint8_t *) malloc(sizeof (uint8_t) * KEY_LEN);
 
@@ -86,7 +82,6 @@ void table(int pwdlength, int s, char *filename) {
 
     for (int l = 0; l < nrows; l++) {
         randomPwd(pwd, pwdlength);
-        printf("Entrypoint: %s -->", pwd);
         fwrite(pwd, 1, pwdlength, f);
         fputc(' ', f);
         for (int j = 0; j < chainlength; j++) {
@@ -96,13 +91,11 @@ void table(int pwdlength, int s, char *filename) {
             memcpy(pwd, reduced, pwdlength);
         }
         fwrite(reduced, 1, pwdlength, f);
-        printf(" Endpoint: %s\n", reduced);
         fputc('\n', f);
     }
     fclose(f);
     free(pwd);
     free(reduced);
-    free(key);
     free(hashed);
 }
 
