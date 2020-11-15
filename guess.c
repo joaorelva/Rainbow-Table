@@ -62,59 +62,43 @@ void guess(char *filename, uint8_t *hash) {
     uint8_t *hashed;
     hashed = (uint8_t *) malloc(sizeof (uint8_t) * pwdlength);
 
-    int encontra = 1;
+    int encontra = 1, flag = 0;
 
-    Rfunction(hash, reduced, pwdlength, 0);
-    for (int i = 1; i < chainlength; i++) {
-        AES_Crypto(reduced, hashed, pwdlength);
-        Rfunction(hashed, reduced, pwdlength, i);
-    }
-
-    while (fscanf(f, "%s %s", pwd_file, reduced_file) != EOF) {
-        if (memcmp(reduced, reduced_file, pwdlength) == 0) {
-            cracked = 1;
-            printf("PASSWORD CRACKED: %s\n", pwd_file);
-            break;
-        }
-    }
-
-    int conta = 0;
-    
-    while (cracked != 1 || encontra != chainlength) {
-        Rfunction(hash, reduced, pwdlength, 0);
-        for (int i = 1; i < chainlength - encontra; i++) {
+    while (flag == 0 && (chainlength - encontra) >= 0) {
+        Rfunction(hash, reduced, pwdlength, chainlength - encontra);
+        for (int i = encontra - 1; i > 0; i--) {
             AES_Crypto(reduced, hashed, pwdlength);
-            Rfunction(hashed, reduced, pwdlength, i);
-        }
-        for (int i = 0; i < encontra; i++) {
-            AES_Crypto(reduced, hashed, pwdlength);
-            Rfunction(hashed, reduced, pwdlength, i);
+            Rfunction(hashed, reduced, pwdlength, chainlength - i);
         }
         while (fscanf(f, "%s %s", pwd_file, reduced_file) != EOF) {
             if (memcmp(reduced, reduced_file, pwdlength) == 0) {
-                int h = 0;
-                while (h == 0) {
-                    AES_Crypto(pwd_file, hashed, pwdlength);
-                    if (memcmp(hash, hashed,pwdlength) == 0) {
-                        printf("PASSWORD CRACKED: %s\n", reduced);
-                        cracked = 1;
-                        h = 1; 
+                if (encontra == 1) {
+                    printf("PASSWORD CRACKED: %s\n", pwd_file);
+                    flag = 1;
+                    exit(1);
+                } else {
+                    memcpy(reduced, pwd_file, pwdlength);
+                    for (int j = 0; j > encontra + 1; j++) {
+                        AES_Crypto(reduced, hashed, pwdlength);
+                        if (memcmp(hash, hashed, KEY_LEN) == 0) {
+                            printf("PASSWORD CRACKED: %s\n", reduced);
+                            flag = 1;
+                            exit(1);
+                        }
+                        Rfunction(hashed, reduced, pwdlength, chainlength - j);
                     }
-                    else{
-                        Rfunction(hashed, reduced, pwdlength, conta);
-                    }
-                    conta++;
                 }
-
             }
         }
         encontra++;
+        fseek(f, 1, SEEK_CUR);
     }
 
     fclose(f);
     free(reduced_file);
     free(pwd_file);
     free(reduced);
+    free(hashed);
 }
 
 int main(int argc, char** argv) {
@@ -134,26 +118,7 @@ int main(int argc, char** argv) {
         printf("Invalid Password length.Exiting... \n");
         exit(1);
     }
-
-    /*
-        hash[0] = 248;
-        hash[1] = 52;
-        hash[2] = 12;
-        hash[3] = 131;
-        hash[4] = 109;
-        hash[5] = 65;
-        hash[6] = 247;
-        hash[7] = 124;
-        hash[8] = 217;
-        hash[9] = 39;
-        hash[10] = 8;
-        hash[11] = 187;
-        hash[12] = 213;
-        hash[13] = 68;
-        hash[14] = 60;
-        hash[15] = 190;
-     * */
-
+    
     hash[0] = 83;
     hash[1] = 33;
     hash[2] = 171;
@@ -170,8 +135,6 @@ int main(int argc, char** argv) {
     hash[13] = 32;
     hash[14] = 77;
     hash[15] = 255;
-
-
 
     guess(filename, hash);
 
